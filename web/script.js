@@ -5,7 +5,9 @@ const psychologists = [
     email: "marina@portalterapia.com",
     crp: "CRP 06/123456",
     especialidade: "Terapia Cognitivo-Comportamental",
+    anosExperiencia: 8,
     descricao: "Atendimento para ansiedade, estresse e organizacao emocional.",
+    tipoAtendimento: "Psicoterapia individual",
     horarios: ["09:00", "10:30", "14:00"]
   },
   {
@@ -14,7 +16,9 @@ const psychologists = [
     email: "rafael@portalterapia.com",
     crp: "CRP 06/654321",
     especialidade: "Ansiedade e Estresse",
+    anosExperiencia: 6,
     descricao: "Acolhimento para adultos em rotina de estudo, trabalho e mudancas.",
+    tipoAtendimento: "Orientação psicológica",
     horarios: ["10:30", "16:00"]
   },
   {
@@ -23,7 +27,9 @@ const psychologists = [
     email: "beatriz@portalterapia.com",
     crp: "CRP 06/889900",
     especialidade: "Psicologia Clínica",
+    anosExperiencia: 11,
     descricao: "Acompanhamento psicologico com foco em desenvolvimento pessoal.",
+    tipoAtendimento: "Psicoterapia individual",
     horarios: ["09:00", "14:00", "16:00"]
   }
 ];
@@ -32,19 +38,25 @@ const state = {
   user: JSON.parse(localStorage.getItem("apo:user")) || null,
   token: localStorage.getItem("apo:token") || "",
   users: JSON.parse(localStorage.getItem("apo:users")) || [],
-  appointments: JSON.parse(localStorage.getItem("apo:appointments")) || [
-    {
-      id: 1,
-      psicologo: "Dra. Marina Lopes",
-      psicologoId: 1,
-      psicologoEmail: "marina@portalterapia.com",
-      paciente: "Ana Souza",
-      pacienteEmail: "ana@email.com",
-      data: "2026-05-18",
+  appointments: JSON.parse(localStorage.getItem("apo:appointments")) || Array.from({ length: 30 }, (_, index) => {
+    const psychologist = psychologists[index % psychologists.length];
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - (index % 6));
+    date.setDate(1 + ((index * 7) % 26));
+    return {
+      id: index + 1,
+      psicologo: psychologist.nome,
+      psicologoId: psychologist.id,
+      psicologoEmail: psychologist.email,
+      paciente: `Paciente ${index + 1}`,
+      pacienteEmail: "",
+      data: date.toISOString().slice(0, 10),
       horario: "14:00",
-      status: "confirmada"
-    }
-  ],
+      status: ["confirmada", "agendada", "cancelada", "confirmada", "confirmada"][index % 5],
+      tipoAtendimento: ["Psicoterapia individual", "Terapia de casal", "Orientação psicológica"][index % 3]
+    };
+  }),
   messages: JSON.parse(localStorage.getItem("apo:messages")) || [
     {
       id: 1,
@@ -55,7 +67,10 @@ const state = {
   ]
 };
 
-const API_BASE_URL = "https://pscicologo-online.onrender.com";
+const defaultApiUrl = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
+  ? "http://localhost:3000/api"
+  : "https://pscicologo-online.onrender.com/api";
+const API_BASE_URL = (window.PORTAL_TERAPIA_API_URL || defaultApiUrl).replace(/\/$/, "");
 
 function save() {
   localStorage.setItem("apo:user", JSON.stringify(state.user));
@@ -67,6 +82,12 @@ function save() {
 
 function $(selector) {
   return document.querySelector(selector);
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  })[character]);
 }
 
 async function apiRequest(path, options = {}) {
@@ -126,8 +147,11 @@ function normalizeUser(usuario) {
     nome: usuario.nome,
     email: usuario.email,
     perfil: perfilNome(usuario.perfil_id),
+    perfil_id: Number(usuario.perfil_id),
     crp: usuario.crp,
-    especialidade: usuario.especialidade
+    especialidade: usuario.especialidade,
+    anosExperiencia: Number(usuario.anos_experiencia || 0),
+    descricao: usuario.descricao_profissional || ""
   };
 }
 
@@ -171,7 +195,11 @@ async function loadPsychologists() {
       email: item.email,
       crp: item.crp || "CRP não informado",
       especialidade: item.especialidade || "Psicologia Clínica",
-      descricao: "Profissional cadastrado no Portal Terapia.",
+      anosExperiencia: Number(item.anos_experiencia || 0),
+      descricao: item.descricao_profissional || "Profissional cadastrado no Portal Terapia.",
+      consultasRealizadas: Number(item.consultas_realizadas || 0),
+      tipoPrincipal: item.tipo_principal || "Sem dados ainda",
+      percentualTipoPrincipal: Number(item.percentual_tipo_principal || 0),
       horarios: ["09:00", "10:30", "14:00", "16:00"]
     })));
   } catch (error) {
@@ -179,29 +207,90 @@ async function loadPsychologists() {
   }
 }
 
+function getProfessionalInsights(item) {
+  if (Number.isFinite(Number(item.consultasRealizadas))) {
+    return {
+      consultations: Number(item.consultasRealizadas),
+      type: item.tipoPrincipal || "Histórico em formação",
+      percentage: Number(item.percentualTipoPrincipal || 0)
+    };
+  }
+
+  const appointments = state.appointments.filter((appointment) => (
+    appointment.psicologoId === item.id || appointment.psicologo === item.nome
+  ) && appointment.status !== "cancelada");
+  const byType = appointments.reduce((counts, appointment) => {
+    const type = appointment.tipoAtendimento || item.tipoAtendimento || "Psicoterapia individual";
+    counts[type] = (counts[type] || 0) + 1;
+    return counts;
+  }, {});
+  const [type, count] = Object.entries(byType).sort((a, b) => b[1] - a[1])[0] || [];
+  return {
+    consultations: appointments.length,
+    type: type || "Histórico em formação",
+    percentage: appointments.length ? Math.round(count / appointments.length * 100) : 0
+  };
+}
+
+function initials(name) {
+  return String(name || "P").split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
+}
+
 function renderPsychologists() {
-  const term = $("#searchInput").value.toLowerCase();
+  const term = $("#searchInput").value.toLowerCase().trim();
   const specialty = $("#specialtyFilter").value;
+  const minExperience = Number($("#experienceFilter").value || 0);
+  const sortBy = $("#sortProfessionals").value;
   const grid = $("#psychologistGrid");
 
-  const filtered = psychologists.filter((item) => {
+  const filtered = psychologists.map((item) => ({ item, insights: getProfessionalInsights(item) })).filter(({ item }) => {
     const matchesTerm = `${item.nome} ${item.especialidade}`.toLowerCase().includes(term);
     const matchesSpecialty = !specialty || item.especialidade === specialty;
-    return matchesTerm && matchesSpecialty;
+    const matchesExperience = Number(item.anosExperiencia || 0) >= minExperience;
+    return matchesTerm && matchesSpecialty && matchesExperience;
   });
 
-  grid.innerHTML = filtered.map((item) => `
-    <article class="psychologist-card">
-      <div>
-        <h3>${item.nome}</h3>
-        <p>${item.crp}</p>
+  filtered.sort((a, b) => {
+    if (sortBy === "experiencia") return Number(b.item.anosExperiencia || 0) - Number(a.item.anosExperiencia || 0);
+    if (sortBy === "nome") return a.item.nome.localeCompare(b.item.nome, "pt-BR");
+    return b.insights.consultations - a.insights.consultations;
+  });
+
+  const count = filtered.length;
+  $("#catalogCount").textContent = formatCount(psychologists.length);
+  $("#catalogResultLabel").textContent = `${count} ${count === 1 ? "perfil encontrado" : "perfis encontrados"}`;
+  if (!count) {
+    grid.innerHTML = '<div class="catalog-empty"><strong>Nenhum perfil encontrado</strong><span>Tente remover um filtro ou buscar outra especialidade.</span></div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(({ item, insights }) => `
+    <article class="professional-card">
+      <div class="professional-card-banner">
+        <div class="professional-avatar" aria-hidden="true">${escapeHtml(initials(item.nome))}</div>
+        <span class="professional-kind">Psicologia online</span>
       </div>
-      <p>${item.descricao}</p>
-      <div class="tag-row">
-        <span class="tag">${item.especialidade}</span>
-        ${item.horarios.map((horario) => `<span class="tag">${horario}</span>`).join("")}
+      <div class="professional-card-body">
+        <div class="professional-profile-head">
+          <div class="professional-name-group">
+            <h3>${escapeHtml(item.nome)}</h3>
+            <p class="professional-crp">${escapeHtml(item.crp || "CRP não informado")}</p>
+          </div>
+          <div class="experience-badge"><strong>${escapeHtml(item.anosExperiencia || 0)}</strong><span>anos de<br>experiência</span></div>
+        </div>
+        <span class="professional-specialty">${escapeHtml(item.especialidade)}</span>
+        <p class="professional-bio">${escapeHtml(item.descricao || "Perfil profissional cadastrado na plataforma.")}</p>
+        <div class="professional-stats-row">
+          <div class="professional-stat"><strong>${formatCount(insights.consultations)}</strong><span>consultas na plataforma</span></div>
+          <span class="stat-divider" aria-hidden="true"></span>
+          <div class="professional-stat dominant-stat"><span>Tipo mais frequente</span><strong>${escapeHtml(insights.type)}</strong></div>
+        </div>
+        <div class="professional-share" aria-label="${escapeHtml(insights.percentage)}% das consultas são do tipo ${escapeHtml(insights.type)}">
+          <div class="professional-share-label"><span>Participação desse tipo</span><strong>${escapeHtml(insights.percentage)}%</strong></div>
+          <div class="professional-share-track"><span style="width:${Math.max(0, Math.min(100, insights.percentage))}%"></span></div>
+        </div>
+        <button class="primary-button professional-book-button" type="button" data-book="${escapeHtml(item.id)}">Agendar com profissional <span aria-hidden="true">→</span></button>
       </div>
-      <button class="primary-button" type="button" data-book="${item.id}">Agendar</button>
     </article>
   `).join("");
 
@@ -223,6 +312,15 @@ function renderPsychologists() {
       location.hash = "agendamento";
     });
   });
+}
+
+function refreshSpecialtyFilter() {
+  const filter = $("#specialtyFilter");
+  const selected = filter.value;
+  const specialtiesInCatalog = [...new Set(psychologists.map((item) => item.especialidade))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  filter.innerHTML = `<option value="">Todas as especialidades</option>${specialtiesInCatalog
+    .map((specialty) => `<option value="${escapeHtml(specialty)}">${escapeHtml(specialty)}</option>`).join("")}`;
+  if (specialtiesInCatalog.includes(selected)) filter.value = selected;
 }
 
 function renderSelects() {
@@ -279,7 +377,8 @@ async function loadAppointments() {
       pacienteEmail: state.user.perfil === "Paciente" ? state.user.email : "",
       data: String(item.data_consulta).slice(0, 10),
       horario: String(item.horario).slice(0, 5),
-      status: item.status
+      status: item.status,
+      tipoAtendimento: item.tipo_atendimento || "Psicoterapia individual"
     }));
     save();
   } catch (error) {
@@ -328,12 +427,19 @@ function renderAuthArea() {
   if (!authArea) return;
 
   if (!state.user) {
+    $("#adminNavLink").hidden = true;
+    $("#painelAdmin").hidden = true;
     authArea.innerHTML = `
       <a class="secondary-button compact-button" href="#loginForm">Login</a>
       <a class="primary-button compact-button" href="#registerForm">Cadastre-se</a>
     `;
     return;
   }
+
+  const isAdmin = state.user.perfil === "Administrador";
+  $("#adminNavLink").hidden = !isAdmin;
+  $("#painelAdmin").hidden = !isAdmin;
+  if (isAdmin) loadAdminDashboard();
 
   authArea.innerHTML = `
     <span class="user-chip">${state.user.nome}</span>
@@ -347,8 +453,104 @@ function renderAuthArea() {
     renderAuthArea();
     renderScheduleAccess();
     renderAppointments();
+    $("#adminNavLink").hidden = true;
+    $("#painelAdmin").hidden = true;
     $("#loginMessage").textContent = "Sessão encerrada.";
   });
+}
+
+function chartRows(items, totalKey = "total") {
+  if (!items.length) return '<p class="empty-chart">Sem dados para este período.</p>';
+  const max = Math.max(1, ...items.map((item) => Number(item[totalKey] || 0)));
+  return items.map((item) => {
+    const value = Number(item[totalKey] || 0);
+    const label = item.nome || item.name || item.label || item.status || item.periodo || "Sem identificação";
+    return `<div class="horizontal-row"><div class="horizontal-label"><span>${escapeHtml(label)}</span><strong>${value}</strong></div><div class="horizontal-track"><span style="width:${Math.max(value ? 5 : 0, value / max * 100)}%"></span></div></div>`;
+  }).join("");
+}
+
+function localDashboardData() {
+  const appointments = state.appointments;
+  const countBy = (key) => Object.entries(appointments.reduce((counts, item) => {
+    const label = item[key] || "Não informado";
+    counts[label] = (counts[label] || 0) + 1;
+    return counts;
+  }, {})).map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total);
+  const monthCounts = {};
+  appointments.forEach((item) => {
+    const month = String(item.data || today()).slice(0, 7);
+    monthCounts[month] = (monthCounts[month] || 0) + 1;
+  });
+  const statuses = countBy("status");
+  return {
+    totais: {
+      profissionais: psychologists.length,
+      pacientes: new Set(appointments.map((item) => item.paciente)).size,
+      consultas: appointments.length,
+      confirmadas: appointments.filter((item) => item.status === "confirmada").length,
+      pendentes: appointments.filter((item) => ["agendada", "pendente"].includes(item.status)).length,
+      canceladas: appointments.filter((item) => item.status === "cancelada").length
+    },
+    porStatus: statuses,
+    porMes: Object.entries(monthCounts).sort(([a], [b]) => a.localeCompare(b)).map(([periodo, total]) => ({ periodo, total })),
+    porEspecialidade: Object.entries(psychologists.reduce((counts, item) => {
+      counts[item.especialidade] = (counts[item.especialidade] || 0) + 1;
+      return counts;
+    }, {})).map(([nome, total]) => ({ nome, total })).sort((a, b) => b.total - a.total),
+    porProfissional: countBy("psicologo"),
+    porTipo: countBy("tipoAtendimento")
+  };
+}
+
+function drawMonthly(items) {
+  const months = Array.from({ length: 6 }, (_, offset) => {
+    const date = new Date();
+    date.setDate(1);
+    date.setMonth(date.getMonth() - (5 - offset));
+    return date.toISOString().slice(0, 7);
+  });
+  const values = months.map((periodo) => ({ periodo, total: Number(items.find((item) => item.periodo === periodo)?.total || 0) }));
+  const max = Math.max(1, ...values.map((item) => item.total));
+  $("#monthlyChart").innerHTML = values.map((item) => {
+    const [, month] = item.periodo.split("-");
+    const label = new Date(`${item.periodo}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "short" });
+    return `<div class="month-column"><strong>${item.total}</strong><span class="month-bar" style="height:${Math.max(4, item.total / max * 100)}%" title="${item.total} consultas"></span><small>${label}</small></div>`;
+  }).join("");
+}
+
+function renderAdminDashboard(data, source) {
+  const totals = data.totais;
+  const metrics = [
+    ["Profissionais", totals.profissionais, "psychologists"],
+    ["Pacientes", totals.pacientes, "patients"],
+    ["Consultas", totals.consultas, "calendar"],
+    ["Confirmadas", totals.confirmadas, "check"],
+    ["Pendentes", totals.pendentes, "clock"],
+    ["Canceladas", totals.canceladas, "cancel"]
+  ];
+  $("#adminMetrics").innerHTML = metrics.map(([label, value, icon], index) => `<article class="metric-card metric-${icon}"><span class="metric-index">0${index + 1}</span><span class="metric-label">${label}</span><strong>${formatCount(value)}</strong></article>`).join("");
+  drawMonthly(data.porMes || []);
+  $("#statusChart").innerHTML = chartRows(data.porStatus || []);
+  $("#specialtyChart").innerHTML = chartRows(data.porEspecialidade || []);
+  $("#typeChart").innerHTML = chartRows(data.porTipo || []);
+  $("#professionalChart").innerHTML = chartRows(data.porProfissional || []);
+  $("#dashboardSource").textContent = source;
+}
+
+async function loadAdminDashboard() {
+  if (state.user?.perfil !== "Administrador") return;
+  const message = $("#dashboardMessage");
+  try {
+    if (!state.token) throw new Error("demo");
+    const data = await apiRequest("/admin/indicadores");
+    renderAdminDashboard(data, "Dados atualizados da plataforma");
+    message.textContent = "";
+  } catch (error) {
+    renderAdminDashboard(localDashboardData(), "Demonstração local");
+    message.textContent = error.message === "demo"
+      ? "Exibindo dados fictícios para demonstração. Conecte a API para consultar o banco de dados."
+      : "Não foi possível atualizar os indicadores da API. Exibindo os dados locais disponíveis.";
+  }
 }
 
 function renderScheduleAccess() {
@@ -475,6 +677,8 @@ function initForms() {
       perfil,
       crp: data.get("crp") || "",
       especialidade: data.get("especialidade") || "",
+      anosExperiencia: Number(data.get("anosExperiencia") || 0),
+      descricao: data.get("descricaoProfissional") || "",
       documentoProfissional: data.get("documentoProfissional") || ""
     };
 
@@ -489,7 +693,9 @@ function initForms() {
           telefone: newUser.telefone,
           idade: calcularIdade(newUser.dataNascimento),
           crp: newUser.crp,
-          especialidade: newUser.especialidade
+          especialidade: newUser.especialidade,
+          anos_experiencia: newUser.anosExperiencia,
+          descricao_profissional: newUser.descricao
         })
       });
 
@@ -513,6 +719,7 @@ function initForms() {
 
     save();
     await loadPsychologists();
+    refreshSpecialtyFilter();
     renderSelects();
     renderPsychologists();
     renderAuthArea();
@@ -546,7 +753,8 @@ function initForms() {
           psicologo_id: Number(selected.id),
           data_consulta: data.get("data"),
           horario: data.get("horario"),
-          observacoes: data.get("observacoes")
+          observacoes: data.get("observacoes"),
+          tipo_atendimento: data.get("tipoAtendimento")
         })
       });
 
@@ -561,7 +769,8 @@ function initForms() {
         pacienteEmail: state.user?.email || "",
         data: data.get("data"),
         horario: data.get("horario"),
-        status: "agendada"
+        status: "agendada",
+        tipoAtendimento: data.get("tipoAtendimento")
       });
     }
 
@@ -590,6 +799,8 @@ function initForms() {
 
   $("#searchInput").addEventListener("input", renderPsychologists);
   $("#specialtyFilter").addEventListener("change", renderPsychologists);
+  $("#experienceFilter").addEventListener("change", renderPsychologists);
+  $("#sortProfessionals").addEventListener("change", renderPsychologists);
   $("#profileSelect").addEventListener("change", toggleProfessionalFields);
 
   document.querySelectorAll("[data-requires-auth='true']").forEach((link) => {
@@ -617,6 +828,7 @@ async function init() {
   }
 
   await loadPsychologists();
+  refreshSpecialtyFilter();
   renderSelects();
   renderPsychologists();
   await loadAppointments();

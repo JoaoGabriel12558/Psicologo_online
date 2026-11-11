@@ -10,10 +10,14 @@ const PERFIS = {
 
 async function registrar(req, res, next) {
   try {
-    const { nome, email, senha, perfil_id, telefone, idade, ocupacao, crp, especialidade } = req.body;
+    const { nome, email, senha, perfil_id, telefone, idade, ocupacao, crp, especialidade, anos_experiencia, descricao_profissional } = req.body;
 
     if (!nome || !email || !senha || !perfil_id) {
       return res.status(400).json({ erro: "Nome, e-mail, senha e perfil sao obrigatorios." });
+    }
+
+    if (Number(perfil_id) === PERFIS.ADMIN) {
+      return res.status(403).json({ erro: "Contas administrativas devem ser provisionadas pela equipe responsavel." });
     }
 
     const existentes = await query("SELECT id_usuario FROM usuario WHERE email = :email", { email });
@@ -29,9 +33,9 @@ async function registrar(req, res, next) {
 
     const resultado = await query(
       `INSERT INTO usuario
-        (nome, email, senha, telefone, idade, ocupacao, crp, especialidade, perfil_id)
+        (nome, email, senha, telefone, idade, ocupacao, crp, especialidade, anos_experiencia, descricao_profissional, perfil_id)
        VALUES
-        (:nome, :email, :senha, :telefone, :idade, :ocupacao, :crp, :especialidade, :perfil_id)`,
+        (:nome, :email, :senha, :telefone, :idade, :ocupacao, :crp, :especialidade, :anos_experiencia, :descricao_profissional, :perfil_id)`,
       {
         nome,
         email,
@@ -41,6 +45,8 @@ async function registrar(req, res, next) {
         ocupacao: ocupacao || null,
         crp: crp || null,
         especialidade: especialidade || null,
+        anos_experiencia: Number(anos_experiencia || 0),
+        descricao_profissional: descricao_profissional || null,
         perfil_id
       }
     );

@@ -5,6 +5,7 @@ const disponibilidadesController = require("../controllers/disponibilidadesContr
 const consultasController = require("../controllers/consultasController");
 const mensagensController = require("../controllers/mensagensController");
 const estatisticasController = require("../controllers/estatisticasController");
+const adminController = require("../controllers/adminController");
 const { autenticar, autorizar } = require("../middleware/auth");
 
 const router = express.Router();
@@ -13,6 +14,7 @@ router.post("/auth/registro", authController.registrar);
 router.post("/auth/login", authController.login);
 
 router.get("/estatisticas", estatisticasController.resumo);
+router.get("/admin/indicadores", autenticar, autorizar(1), adminController.indicadores);
 
 router.get("/usuarios/psicologos", usuariosController.listarPsicologos);
 router.get("/usuarios/perfil", autenticar, usuariosController.obterPerfil);

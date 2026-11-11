@@ -32,6 +32,9 @@ O projeto está dividido em duas partes principais:
 - Armazenamento seguro de senhas com bcryptjs.
 - Listagem de psicólogos cadastrados.
 - Indicadores dinâmicos de profissionais, pacientes e especialidades.
+- Catálogo analítico de psicólogos com experiência, volume de consultas e tipo de atendimento mais frequente.
+- Dashboard administrativo com consultas por mês, status, especialidade, tipo e profissional.
+- Indicadores consolidados protegidos por autenticação e perfil de administrador.
 - Agendamento de consultas.
 - Visualização de consultas por perfil:
   - paciente visualiza apenas seus próprios agendamentos;
@@ -110,6 +113,10 @@ http://localhost:3000
 
 Quando a API está disponível, o site busca estatísticas, usuários e consultas no MySQL. Caso a API esteja desligada, o frontend ainda funciona como protótipo navegável usando dados locais de demonstração.
 
+O catálogo público apresenta somente informações profissionais e indicadores agregados. Para visualizar o dashboard, entre com uma conta de perfil **Administrador**. A API disponibiliza os indicadores em `GET /api/admin/indicadores`, protegido por JWT e autorização administrativa. Sem API, a tela de demonstração usa registros fictícios locais.
+
+Contas administrativas não podem ser criadas pelo formulário público de cadastro. Para preparar uma conta administrativa para a apresentação, cadastre primeiro um usuário e, no MySQL, altere seu perfil: `UPDATE atendimento_psicologico.usuario SET perfil_id = 1 WHERE email = 'admin@exemplo.com';` (use o e-mail cadastrado).
+
 ### Backend
 
 Entre na pasta do backend:
@@ -151,6 +158,16 @@ Crie o banco e as tabelas:
 ```bash
 npm run db:setup
 ```
+
+O comando também aplica as novas colunas de experiência, apresentação profissional e tipo de atendimento a bancos já existentes.
+
+Para popular o banco com uma massa fictícia para análise, execute no backend:
+
+```bash
+npm run db:seed-demo
+```
+
+Isso cria 50 profissionais, 240 pacientes e até 1.250 consultas distribuídas ao longo de aproximadamente 18 meses. O comando pode ser repetido sem duplicar os registros de demonstração. Os pacientes usam contas fictícias sem senha conhecida e não contêm observações clínicas.
 
 Inicie a API:
 
@@ -260,6 +277,7 @@ Todas as rotas da API usam o prefixo `/api`.
 | Método | Rota | Descrição |
 |---|---|---|
 | `GET` | `/api/estatisticas` | Retorna total de profissionais, pacientes e especialidades |
+| `GET` | `/api/admin/indicadores` | Retorna dados agregados do dashboard para administradores autenticados |
 | `POST` | `/api/auth/registro` | Cadastra usuário |
 | `POST` | `/api/auth/login` | Realiza login |
 | `GET` | `/api/usuarios/psicologos` | Lista psicólogos cadastrados |

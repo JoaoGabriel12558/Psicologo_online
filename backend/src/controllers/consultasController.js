@@ -2,7 +2,7 @@ const { query } = require("../config/database");
 
 async function agendar(req, res, next) {
   try {
-    const { psicologo_id, data_consulta, horario, observacoes } = req.body;
+    const { psicologo_id, data_consulta, horario, observacoes, tipo_atendimento } = req.body;
 
     if (!psicologo_id || !data_consulta || !horario) {
       return res.status(400).json({ erro: "Psicologo, data e horario sao obrigatorios." });
@@ -24,15 +24,16 @@ async function agendar(req, res, next) {
 
     const resultado = await query(
       `INSERT INTO consulta
-        (paciente_id, psicologo_id, data_consulta, horario, status, observacoes)
+        (paciente_id, psicologo_id, data_consulta, horario, status, observacoes, tipo_atendimento)
        VALUES
-        (:paciente_id, :psicologo_id, :data_consulta, :horario, 'agendada', :observacoes)`,
+        (:paciente_id, :psicologo_id, :data_consulta, :horario, 'agendada', :observacoes, :tipo_atendimento)`,
       {
         paciente_id: req.usuario.id_usuario,
         psicologo_id,
         data_consulta,
         horario,
-        observacoes: observacoes || null
+        observacoes: observacoes || null,
+        tipo_atendimento: tipo_atendimento || "Psicoterapia individual"
       }
     );
 

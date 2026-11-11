@@ -17,6 +17,7 @@
     <a href="#como_funciona">Como Funciona</a>
     <a href="#quem_somos">Quem Somos</a>
     <a href="#nosso_time">Nosso Time</a>
+    <a href="#painelAdmin" id="adminNavLink" hidden>Painel</a>
     <a href="#loginForm">Entrar</a>
   </nav>
 
@@ -124,7 +125,6 @@
               <select name="perfil" id="profileSelect">
                 <option value="Paciente">Paciente</option>
                 <option value="Psicólogo">Psicólogo</option>
-                <option value="Administrador">Administrador</option>
               </select>
             </label>
           </div>
@@ -163,6 +163,20 @@
                 <input name="especialidade" type="text" placeholder="Ex.: Terapia Cognitivo-Comportamental">
               </label>
             </div>
+            <div class="field-grid">
+              <label>
+                Anos de experiência
+                <input name="anosExperiencia" type="number" min="0" max="60" value="0">
+              </label>
+              <label>
+                Tipo de atendimento
+                <input name="tipoAtendimento" type="text" value="Psicoterapia individual" placeholder="Ex.: Terapia individual">
+              </label>
+            </div>
+            <label>
+              Apresentação profissional
+              <textarea name="descricaoProfissional" rows="3" maxlength="500" placeholder="Conte um pouco sobre sua abordagem e experiência"></textarea>
+            </label>
             <label>
               Documento de identificação profissional
               <input name="documentoProfissional" type="text" placeholder="Número do registro ou documento institucional">
@@ -174,20 +188,69 @@
       </section>
 
       <section class="content-section" id="nosso_time">
-        <div class="section-heading">
-          <p class="eyebrow">Nosso Time</p>
-          <h2>Profissionais qualificados prontos para ajudar</h2>
+        <div class="catalog-heading">
+          <div class="section-heading">
+            <p class="eyebrow">Encontre seu profissional</p>
+            <h2>Um perfil completo para escolher com confiança</h2>
+            <p class="catalog-description">Conheça a experiência e a atuação de cada psicólogo antes de agendar.</p>
+          </div>
+          <div class="catalog-count"><strong id="catalogCount">--</strong><span>profissionais</span></div>
         </div>
-        <div class="toolbar">
-          <input id="searchInput" type="search" placeholder="Buscar por nome ou especialidade">
+        <div class="toolbar catalog-toolbar">
+          <input id="searchInput" type="search" placeholder="Buscar por nome ou especialidade" aria-label="Buscar profissionais">
           <select id="specialtyFilter" aria-label="Filtrar por especialidade">
             <option value="">Todas as especialidades</option>
-            <option value="Terapia Cognitivo-Comportamental">Terapia Cognitivo-Comportamental</option>
-            <option value="Ansiedade e Estresse">Ansiedade e Estresse</option>
-            <option value="Psicologia Clínica">Psicologia Clínica</option>
+          </select>
+          <select id="experienceFilter" aria-label="Filtrar por experiência">
+            <option value="0">Qualquer experiência</option>
+            <option value="5">5 anos ou mais</option>
+            <option value="10">10 anos ou mais</option>
+            <option value="15">15 anos ou mais</option>
+          </select>
+          <select id="sortProfessionals" aria-label="Ordenar profissionais">
+            <option value="consultas">Mais consultados</option>
+            <option value="experiencia">Mais experientes</option>
+            <option value="nome">Ordem alfabética</option>
           </select>
         </div>
+        <p class="catalog-result-label" id="catalogResultLabel" aria-live="polite"></p>
         <div class="psychologist-grid" id="psychologistGrid"></div>
+      </section>
+
+      <section class="content-section analytics-section" id="painelAdmin" hidden>
+        <div class="section-heading dashboard-heading">
+          <div>
+            <p class="eyebrow">Visão administrativa</p>
+            <h2>Indicadores da plataforma</h2>
+            <p class="dashboard-subtitle">Acompanhe a atividade e o perfil dos atendimentos.</p>
+          </div>
+          <span class="data-source" id="dashboardSource">Aguardando dados</span>
+        </div>
+        <p class="form-message dashboard-message" id="dashboardMessage" role="status"></p>
+        <div class="metric-grid" id="adminMetrics"></div>
+        <div class="analytics-grid">
+          <article class="analytics-card wide-chart">
+            <div class="chart-heading"><div><h3>Consultas por mês</h3><p>Últimos seis meses</p></div></div>
+            <div class="bar-chart" id="monthlyChart" aria-label="Consultas por mês"></div>
+          </article>
+          <article class="analytics-card">
+            <div class="chart-heading"><div><h3>Status das consultas</h3><p>Distribuição dos agendamentos</p></div></div>
+            <div class="status-chart" id="statusChart"></div>
+          </article>
+          <article class="analytics-card">
+            <div class="chart-heading"><div><h3>Especialidades</h3><p>Profissionais por área</p></div></div>
+            <div class="horizontal-chart" id="specialtyChart"></div>
+          </article>
+          <article class="analytics-card">
+            <div class="chart-heading"><div><h3>Atendimentos mais frequentes</h3><p>Tipos registrados nas consultas</p></div></div>
+            <div class="horizontal-chart" id="typeChart"></div>
+          </article>
+          <article class="analytics-card">
+            <div class="chart-heading"><div><h3>Consultas por profissional</h3><p>Profissionais com maior volume</p></div></div>
+            <div class="horizontal-chart" id="professionalChart"></div>
+          </article>
+        </div>
+        <p class="privacy-note">Os gráficos mostram dados agregados. Informações pessoais e observações clínicas de pacientes não são exibidas.</p>
       </section>
 
       <section class="content-section split" id="agendamento">
@@ -215,6 +278,15 @@
               </select>
             </label>
           </div>
+          <label>
+            Tipo de atendimento
+            <select name="tipoAtendimento">
+              <option>Psicoterapia individual</option>
+              <option>Terapia de casal</option>
+              <option>Orientação psicológica</option>
+              <option>Avaliação psicológica</option>
+            </select>
+          </label>
           <label>
             Observações
             <textarea name="observacoes" rows="4" placeholder="Motivo principal da consulta"></textarea>

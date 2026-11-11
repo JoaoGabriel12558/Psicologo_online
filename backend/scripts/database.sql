@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS usuario (
   ocupacao VARCHAR(100),
   crp VARCHAR(20),
   especialidade VARCHAR(100),
+  anos_experiencia INT NOT NULL DEFAULT 0,
+  descricao_profissional VARCHAR(500),
   perfil_id INT NOT NULL,
   criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuario_perfil
@@ -43,6 +45,7 @@ CREATE TABLE IF NOT EXISTS consulta (
   data_consulta DATE NOT NULL,
   horario TIME NOT NULL,
   status VARCHAR(30) NOT NULL DEFAULT 'agendada',
+  tipo_atendimento VARCHAR(100) NOT NULL DEFAULT 'Psicoterapia individual',
   link_sala VARCHAR(255),
   observacoes TEXT,
   criada_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
