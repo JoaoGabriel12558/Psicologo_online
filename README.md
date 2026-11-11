@@ -189,7 +189,7 @@ http://localhost:3000
 
 ## Hospedagem e escopo
 
-O repositório GitHub guarda o código-fonte e os materiais de apoio. O frontend, a API e o MySQL são executados localmente para demonstração. Esta entrega não configura publicação pública nem conexão a um banco em nuvem. O workflow de publicação automática do GitHub Pages foi removido. Para retirar a página já publicada, acesse `Settings > Pages` no repositório e escolha **Unpublish site**. Para conectar uma API em outra hospedagem, configure `window.PORTAL_TERAPIA_API_URL` antes de carregar `web/script.js`; sem essa variável, o frontend usa a API local em `http://localhost:3000/api` quando executado no computador.
+O repositório GitHub guarda o código-fonte e os materiais de apoio. O frontend, a API e o MySQL são executados localmente para demonstração. Esta entrega não configura publicação pública nem conexão a um banco em nuvem. O workflow do GitHub Pages foi removido e a publicação anterior foi retirada. Para conectar uma API em outra hospedagem, configure `window.PORTAL_TERAPIA_API_URL` antes de carregar `web/script.js`; sem essa variável, o frontend usa a API local em `http://localhost:3000/api` quando executado no computador.
 
 ## Banco de Dados
 
