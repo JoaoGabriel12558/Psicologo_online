@@ -1,4 +1,7 @@
-const psychologists = [
+const demoData = window.PORTAL_TERAPIA_DEMO_DATA || null;
+const psychologists = demoData?.professionals?.length
+  ? demoData.professionals.map((item) => ({ ...item, horarios: ["09:00", "10:30", "14:00", "16:00"] }))
+  : [
   {
     id: 1,
     nome: "Dra. Marina Lopes",
@@ -32,7 +35,7 @@ const psychologists = [
     tipoAtendimento: "Psicoterapia individual",
     horarios: ["09:00", "14:00", "16:00"]
   }
-];
+  ];
 
 const state = {
   user: JSON.parse(localStorage.getItem("apo:user")) || null,
@@ -66,6 +69,12 @@ const state = {
     }
   ]
 };
+
+const demoDashboardMode = new URLSearchParams(location.search).get("demo") === "1";
+if (demoDashboardMode) {
+  state.token = "";
+  state.user = { nome: "Demonstração", perfil: "Administrador", perfil_id: 1 };
+}
 
 const defaultApiUrl = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
   ? "http://localhost:3000/api"
@@ -176,7 +185,7 @@ async function loadStats() {
     const stats = await response.json();
     setStats(stats, "api");
   } catch (error) {
-    setStats({
+    setStats(demoData?.stats || {
       profissionais: psychologists.length,
       pacientes: state.appointments.length,
       especialidades: new Set(psychologists.map((item) => item.especialidade)).size
@@ -470,6 +479,8 @@ function chartRows(items, totalKey = "total") {
 }
 
 function localDashboardData() {
+  if (demoData?.dashboard) return demoData.dashboard;
+
   const appointments = state.appointments;
   const countBy = (key) => Object.entries(appointments.reduce((counts, item) => {
     const label = item[key] || "Não informado";
@@ -546,10 +557,13 @@ async function loadAdminDashboard() {
     renderAdminDashboard(data, "Dados atualizados da plataforma");
     message.textContent = "";
   } catch (error) {
-    renderAdminDashboard(localDashboardData(), "Demonstração local");
+    const snapshotDate = demoData?.atualizadoEm
+      ? new Date(`${demoData.atualizadoEm}T12:00:00`).toLocaleDateString("pt-BR")
+      : "atualização local";
+    renderAdminDashboard(localDashboardData(), `Demonstração · ${snapshotDate}`);
     message.textContent = error.message === "demo"
-      ? "Exibindo dados fictícios para demonstração. Conecte a API para consultar o banco de dados."
-      : "Não foi possível atualizar os indicadores da API. Exibindo os dados locais disponíveis.";
+      ? "Exibindo uma cópia fictícia da base de demonstração. Os dados não são atualizados em tempo real."
+      : "API indisponível. Exibindo a cópia fictícia da base de demonstração.";
   }
 }
 

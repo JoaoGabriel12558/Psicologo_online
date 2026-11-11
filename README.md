@@ -113,7 +113,7 @@ http://localhost:3000
 
 Quando a API está disponível, o site busca estatísticas, usuários e consultas no MySQL. Caso a API esteja desligada, o frontend ainda funciona como protótipo navegável usando dados locais de demonstração.
 
-O catálogo público apresenta somente informações profissionais e indicadores agregados. Para visualizar o dashboard, entre com uma conta de perfil **Administrador**. A API disponibiliza os indicadores em `GET /api/admin/indicadores`, protegido por JWT e autorização administrativa. Sem API, a tela de demonstração usa registros fictícios locais.
+O catálogo público apresenta somente informações profissionais e indicadores agregados. Para visualizar o painel de demonstração pública, abra o site com `?demo=1` no endereço ou use o link **Painel de demonstração**. Essa visualização usa um snapshot fictício da base de demonstração; não é atualizado em tempo real. Com a API disponível, o catálogo e o dashboard administrativo usam os dados do MySQL. O endpoint `GET /api/admin/indicadores` segue protegido por JWT e autorização administrativa.
 
 Contas administrativas não podem ser criadas pelo formulário público de cadastro. Para preparar uma conta administrativa para a apresentação, cadastre primeiro um usuário e, no MySQL, altere seu perfil: `UPDATE atendimento_psicologico.usuario SET perfil_id = 1 WHERE email = 'admin@exemplo.com';` (use o e-mail cadastrado).
 
