@@ -70,6 +70,24 @@ async function seed() {
     await connection.beginTransaction();
 
     const unusableDemoPassword = await bcrypt.hash(randomBytes(40).toString("hex"), 10);
+    const [savedSeedDate] = await connection.execute(
+      "SELECT DATE_FORMAT(data_referencia, '%Y-%m-%d') AS data_referencia FROM demo_seed_control WHERE id = 1"
+    );
+    let seedDate = savedSeedDate[0]?.data_referencia;
+    if (!seedDate) {
+      const [existingAppointments] = await connection.execute(
+        `SELECT DATE_FORMAT(DATE_SUB(MAX(c.data_consulta), INTERVAL 12 DAY), '%Y-%m-%d') AS data_referencia
+         FROM consulta c
+         INNER JOIN usuario u ON u.id_usuario = c.psicologo_id
+         WHERE u.email LIKE 'demo.prof.%@portalterapia.local'`
+      );
+      seedDate = existingAppointments[0]?.data_referencia || new Date().toISOString().slice(0, 10);
+      await connection.execute(
+        "INSERT INTO demo_seed_control (id, data_referencia) VALUES (1, ?)",
+        [seedDate]
+      );
+    }
+    const referenceDate = new Date(`${seedDate}T12:00:00`);
     const psychologists = Array.from({ length: 50 }, (_, index) => {
       const specialty = specialties[index % specialties.length];
       return [
@@ -118,15 +136,14 @@ async function seed() {
       throw new Error("Os registros de demonstração não puderam ser identificados com segurança.");
     }
 
-    const today = new Date();
     const appointments = [];
     for (let professionalIndex = 0; professionalIndex < professionals.length; professionalIndex += 1) {
       for (let slot = 0; slot < 25; slot += 1) {
         const dayOffset = 540 - slot * 23;
-        const date = new Date(today);
+        const date = new Date(referenceDate);
         date.setDate(date.getDate() - dayOffset);
         const isoDate = date.toISOString().slice(0, 10);
-        const future = date > today;
+        const future = date > referenceDate;
         const status = future
           ? "agendada"
           : ["confirmada", "confirmada", "confirmada", "agendada", "cancelada"][

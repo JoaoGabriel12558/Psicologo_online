@@ -76,9 +76,8 @@ if (demoDashboardMode) {
   state.user = { nome: "Demonstração", perfil: "Administrador", perfil_id: 1 };
 }
 
-const defaultApiUrl = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname)
-  ? "http://localhost:3000/api"
-  : "https://pscicologo-online.onrender.com/api";
+const localEnvironment = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
+const defaultApiUrl = localEnvironment ? "http://localhost:3000/api" : "";
 const API_BASE_URL = (window.PORTAL_TERAPIA_API_URL || defaultApiUrl).replace(/\/$/, "");
 
 function save() {
@@ -100,6 +99,8 @@ function escapeHtml(value) {
 }
 
 async function apiRequest(path, options = {}) {
+  if (!API_BASE_URL) throw new Error("API não configurada.");
+
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {})
@@ -179,6 +180,8 @@ function setStats({ profissionais, pacientes, especialidades }, source = "api") 
 
 async function loadStats() {
   try {
+    if (!API_BASE_URL) throw new Error("API não configurada.");
+
     const response = await fetch(`${API_BASE_URL}/estatisticas`);
     if (!response.ok) throw new Error("API indisponivel");
 

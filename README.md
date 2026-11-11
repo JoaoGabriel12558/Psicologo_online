@@ -93,7 +93,7 @@ O projeto pode ser usado de duas formas:
 - **Localmente, para desenvolvimento e apresentação técnica:** o frontend, a API e o MySQL rodam no computador.
 - **Publicado na web, para acesso como um site comum:** o frontend fica hospedado online, a API fica em um servidor Node.js e o banco MySQL fica em nuvem.
 
-O GitHub é usado para versionar e publicar o código. Para o sistema funcionar online com dados reais, também é necessário hospedar a API e o banco de dados.
+O GitHub é usado para versionar e armazenar o código e os materiais da entrega. Esta versão é uma prova de conceito acadêmica executada localmente; não inclui hospedagem de API nem banco de dados em nuvem.
 
 ## Executar Localmente
 
@@ -113,7 +113,7 @@ http://localhost:3000
 
 Quando a API está disponível, o site busca estatísticas, usuários e consultas no MySQL. Caso a API esteja desligada, o frontend ainda funciona como protótipo navegável usando dados locais de demonstração.
 
-O catálogo público apresenta somente informações profissionais e indicadores agregados. Para visualizar o painel de demonstração pública, abra o site com `?demo=1` no endereço ou use o link **Painel de demonstração**. Essa visualização usa um snapshot fictício da base de demonstração; não é atualizado em tempo real. Com a API disponível, o catálogo e o dashboard administrativo usam os dados do MySQL. O endpoint `GET /api/admin/indicadores` segue protegido por JWT e autorização administrativa.
+O catálogo apresenta informações profissionais e indicadores agregados. Para visualizar o painel de demonstração, abra `web/index.html?demo=1` ou use o link **Painel de demonstração**. Essa visualização usa um snapshot fictício da base de demonstração e não é atualizada em tempo real. Ao executar a API local, o catálogo e o dashboard administrativo passam a consultar o MySQL; o endpoint `GET /api/admin/indicadores` exige JWT e perfil de administrador.
 
 Contas administrativas não podem ser criadas pelo formulário público de cadastro. Para preparar uma conta administrativa para a apresentação, cadastre primeiro um usuário e, no MySQL, altere seu perfil: `UPDATE atendimento_psicologico.usuario SET perfil_id = 1 WHERE email = 'admin@exemplo.com';` (use o e-mail cadastrado).
 
@@ -187,70 +187,9 @@ Servidor padrão:
 http://localhost:3000
 ```
 
-## Publicação na Web
+## Hospedagem e escopo
 
-Para deixar o Portal Terapia disponível como um site comum, a arquitetura recomendada é:
-
-```text
-GitHub
-├── Repositório com o código-fonte
-
-Frontend
-├── GitHub Pages, Vercel ou Netlify
-
-Backend
-├── Render, Railway, Fly.io ou outro serviço Node.js
-
-Banco de dados
-└── MySQL em nuvem, como Railway, Aiven, PlanetScale ou Clever Cloud
-```
-
-Fluxo de publicação:
-
-1. Subir o código para o GitHub.
-2. Publicar a pasta `web/` em um serviço de frontend.
-3. Publicar a pasta `backend/` em um serviço que execute Node.js.
-4. Criar um banco MySQL em nuvem.
-5. Configurar as variáveis de ambiente da API no painel da hospedagem.
-6. Atualizar o endereço da API no frontend, se necessário.
-
-Com isso, o usuário acessa o site pelo navegador e os dados passam a ser salvos no banco online.
-
-### Publicação automática do frontend
-
-O repositório já possui um workflow em:
-
-```text
-.github/workflows/pages.yml
-```
-
-Esse workflow publica automaticamente a pasta `web/` no GitHub Pages sempre que houver envio para a branch `main`.
-
-Depois do primeiro envio, confira em:
-
-```text
-Settings > Pages
-```
-
-Se necessário, selecione a opção **GitHub Actions** como origem da publicação.
-
-### Configurar API online no frontend
-
-Por padrão, o frontend tenta usar a API local:
-
-```text
-http://localhost:3000/api
-```
-
-Quando o backend estiver publicado, a URL online pode ser configurada antes do carregamento do `script.js`:
-
-```html
-<script>
-  window.PORTAL_TERAPIA_API_URL = "https://sua-api-online.com/api";
-</script>
-```
-
-Sem essa configuração, o site continua funcionando como protótipo navegável, usando dados de demonstração quando a API não estiver disponível.
+O repositório GitHub guarda o código-fonte e os materiais de apoio. O frontend, a API e o MySQL são executados localmente para demonstração. Esta entrega não configura publicação pública nem conexão a um banco em nuvem. O workflow de publicação automática do GitHub Pages foi removido. Para retirar a página já publicada, acesse `Settings > Pages` no repositório e escolha **Unpublish site**. Para conectar uma API em outra hospedagem, configure `window.PORTAL_TERAPIA_API_URL` antes de carregar `web/script.js`; sem essa variável, o frontend usa a API local em `http://localhost:3000/api` quando executado no computador.
 
 ## Banco de Dados
 

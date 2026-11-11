@@ -70,6 +70,11 @@ CREATE TABLE IF NOT EXISTS mensagem (
     FOREIGN KEY (destinatario_id) REFERENCES usuario(id_usuario)
 );
 
+CREATE TABLE IF NOT EXISTS demo_seed_control (
+  id INT PRIMARY KEY,
+  data_referencia DATE NOT NULL
+);
+
 INSERT IGNORE INTO perfil (id_perfil, nome_perfil) VALUES
   (1, 'Administrador'),
   (2, 'Psicologo'),
