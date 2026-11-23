@@ -107,6 +107,7 @@
             Senha
             <input name="senha" type="password" required>
           </label>
+          <button class="text-button" id="forgotPasswordButton" type="button">Esqueci minha senha</button>
           <button class="primary-button full" type="submit">Entrar</button>
           <p class="form-message" id="loginMessage"></p>
         </form>
@@ -379,6 +380,32 @@
           </article>
         </div>
       </section>
+
+      <div class="pt-modal-overlay" id="resetPasswordModal" hidden>
+        <section class="pt-modal-card" role="dialog" aria-modal="true" aria-labelledby="resetPasswordTitle">
+          <button class="pt-modal-close" type="button" id="closeResetModal" aria-label="Fechar">×</button>
+          <h2 id="resetPasswordTitle">Recuperar senha</h2>
+          <form id="forgotPasswordForm">
+            <label>E-mail cadastrado<input id="forgotEmailInput" type="email" required></label>
+            <button class="primary-button full" type="submit">Enviar link de recuperação</button>
+          </form>
+          <form id="newPasswordForm" hidden>
+            <input id="resetTokenInput" type="hidden">
+            <label>Nova senha<input id="resetNewPasswordInput" type="password" minlength="8" required></label>
+            <button class="primary-button full" type="submit">Salvar nova senha</button>
+          </form>
+          <p id="resetModalMessage" class="form-message" aria-live="polite"></p>
+        </section>
+      </div>
+
+      <div class="pt-modal-overlay" id="videoCallModal" hidden>
+        <section class="pt-modal-card pt-video-card" role="dialog" aria-modal="true" aria-labelledby="videoCallTitle">
+          <button class="pt-modal-close" type="button" id="closeVideoModal" aria-label="Fechar">×</button>
+          <h2 id="videoCallTitle">Consulta por vídeo</h2>
+          <p class="privacy-note">A chamada usa o serviço Jitsi, um provedor externo. Este projeto é uma demonstração; não use para compartilhar informações clínicas reais.</p>
+          <div id="jitsiContainer" class="jitsi-container"></div>
+        </section>
+      </div>
 
       <footer class="site-footer">
         <h2>Converse com a gente</h2>

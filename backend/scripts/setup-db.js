@@ -3,15 +3,15 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
+const { mysqlOptions } = require("../src/config/mysqlOptions");
 
 async function setup() {
   const sql = fs.readFileSync(path.join(__dirname, "database.sql"), "utf8");
 
+  const connectionOptions = mysqlOptions();
+  delete connectionOptions.database;
   const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || "localhost",
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
+    ...connectionOptions,
     multipleStatements: true
   });
 
@@ -31,6 +31,21 @@ async function setup() {
     );
     if (!Number(rows[0].total)) {
       await connection.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
+    }
+  }
+
+  const resetColumns = [
+    ["reset_token_hash", "CHAR(64) NULL"],
+    ["reset_expira", "DATETIME NULL"]
+  ];
+  for (const [column, definition] of resetColumns) {
+    const [rows] = await connection.query(
+      `SELECT COUNT(*) AS total FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'usuario' AND COLUMN_NAME = ?`,
+      [column]
+    );
+    if (!Number(rows[0].total)) {
+      await connection.query(`ALTER TABLE usuario ADD COLUMN \`${column}\` ${definition}`);
     }
   }
 
