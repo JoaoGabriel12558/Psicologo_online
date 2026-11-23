@@ -1,4 +1,5 @@
 const { query } = require("../config/database");
+const crypto = require("crypto");
 
 async function agendar(req, res, next) {
   try {
@@ -58,7 +59,9 @@ async function listar(req, res, next) {
     }
 
     const consultas = await query(
-      `SELECT c.*, p.nome AS paciente_nome, ps.nome AS psicologo_nome
+      `SELECT c.id_consulta, c.paciente_id, c.psicologo_id, c.data_consulta,
+              c.horario, c.status, c.tipo_atendimento, c.observacoes, c.criada_em,
+              p.nome AS paciente_nome, ps.nome AS psicologo_nome
        FROM consulta c
        INNER JOIN usuario p ON p.id_usuario = c.paciente_id
        INNER JOIN usuario ps ON ps.id_usuario = c.psicologo_id
@@ -91,25 +94,48 @@ async function cancelar(req, res, next) {
 
 async function confirmar(req, res, next) {
   try {
-    const { link_sala } = req.body;
+    const domain = process.env.JITSI_DOMAIN || "meet.jit.si";
+    if (!/^[a-z0-9.-]+$/i.test(domain)) {
+      return res.status(500).json({ erro: "Domínio da videochamada inválido." });
+    }
+    const room = `portal-terapia-${crypto.randomBytes(24).toString("hex")}`;
 
-    await query(
+    const resultado = await query(
       `UPDATE consulta
        SET status = 'confirmada',
-           link_sala = COALESCE(:link_sala, link_sala)
+           link_sala = COALESCE(link_sala, :link_sala)
        WHERE id_consulta = :id
          AND psicologo_id = :psicologo_id`,
       {
         id: req.params.id,
         psicologo_id: req.usuario.id_usuario,
-        link_sala: link_sala || null
+        link_sala: `https://${domain}/${room}`
       }
     );
 
+    if (!resultado.affectedRows) return res.status(404).json({ erro: "Consulta não encontrada." });
     return res.json({ mensagem: "Consulta confirmada." });
   } catch (error) {
     return next(error);
   }
 }
 
-module.exports = { agendar, listar, cancelar, confirmar };
+async function obterSala(req, res, next) {
+  try {
+    const consultas = await query(
+      `SELECT status, link_sala FROM consulta
+       WHERE id_consulta = :id
+         AND (paciente_id = :usuario_id OR psicologo_id = :usuario_id)`,
+      { id: req.params.id, usuario_id: req.usuario.id_usuario }
+    );
+    if (!consultas.length) return res.status(404).json({ erro: "Consulta não encontrada." });
+    if (consultas[0].status !== "confirmada" || !consultas[0].link_sala) {
+      return res.status(409).json({ erro: "A sala estará disponível depois que o psicólogo confirmar a consulta." });
+    }
+    return res.json({ link_sala: consultas[0].link_sala });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { agendar, listar, cancelar, confirmar, obterSala };

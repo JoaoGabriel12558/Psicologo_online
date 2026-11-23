@@ -12,6 +12,8 @@ const router = express.Router();
 
 router.post("/auth/registro", authController.registrar);
 router.post("/auth/login", authController.login);
+router.post("/auth/esqueci-senha", authController.solicitarRecuperacao);
+router.post("/auth/redefinir-senha", authController.redefinirSenha);
 
 router.get("/estatisticas", estatisticasController.resumo);
 router.get("/admin/indicadores", autenticar, autorizar(1), adminController.indicadores);
@@ -28,6 +30,7 @@ router.post("/consultas", autenticar, autorizar(3), consultasController.agendar)
 router.get("/consultas", autenticar, consultasController.listar);
 router.patch("/consultas/:id/cancelar", autenticar, consultasController.cancelar);
 router.patch("/consultas/:id/confirmar", autenticar, autorizar(2), consultasController.confirmar);
+router.get("/consultas/:id/sala", autenticar, consultasController.obterSala);
 
 router.get("/mensagens", autenticar, mensagensController.conversas);
 router.post("/mensagens", autenticar, mensagensController.enviar);

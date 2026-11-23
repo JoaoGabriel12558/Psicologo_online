@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS usuario (
   especialidade VARCHAR(100),
   anos_experiencia INT NOT NULL DEFAULT 0,
   descricao_profissional VARCHAR(500),
+  reset_token_hash CHAR(64) NULL,
+  reset_expira DATETIME NULL,
   perfil_id INT NOT NULL,
   criado_em DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuario_perfil

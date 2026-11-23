@@ -16,6 +16,12 @@ npm run db:setup
 npm run dev
 ```
 
+Configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` and `SMTP_FROM` in `.env` to enable password recovery. Set `APP_URL` to the public address of `web/index.html`; production URLs must use HTTPS. Reset tokens are single-use, expire after one hour and are sent by e-mail.
+
+For a cloud MySQL database, set `DB_SSL=true`. Certificate verification remains enabled. If the provider requires a custom CA certificate, set `DB_SSL_CA_PATH` to its local file path. Keep `DB_SSL=false` for a local MySQL server.
+
+The psychologist confirms an appointment before its participants can request its video room. The current demo uses Jitsi (`JITSI_DOMAIN`) and sends the call to an external provider; do not use this public demo integration for real clinical sessions or sensitive patient data.
+
 ## Endpoints principais
 
 Todas as rotas usam o prefixo `/api`.
@@ -24,6 +30,8 @@ Todas as rotas usam o prefixo `/api`.
 |---|---|---|
 | POST | `/api/auth/registro` | Cadastro de paciente ou psicologo |
 | POST | `/api/auth/login` | Login com e-mail e senha |
+| POST | `/api/auth/esqueci-senha` | Solicita link de redefinição por e-mail |
+| POST | `/api/auth/redefinir-senha` | Redefine a senha com token de uso único |
 | GET | `/api/estatisticas` | Resumo público de profissionais, pacientes e especialidades |
 | GET | `/api/admin/indicadores` | Indicadores agregados, somente para administradores autenticados |
 | GET | `/api/usuarios/psicologos` | Lista psicologos disponiveis |
@@ -36,6 +44,7 @@ Todas as rotas usam o prefixo `/api`.
 | GET | `/api/consultas` | Lista consultas do usuario autenticado |
 | PATCH | `/api/consultas/:id/cancelar` | Cancela consulta |
 | PATCH | `/api/consultas/:id/confirmar` | Confirma consulta |
+| GET | `/api/consultas/:id/sala` | Retorna a sala de vídeo a um dos participantes da consulta confirmada |
 | GET | `/api/mensagens` | Lista conversas |
 | POST | `/api/mensagens` | Envia mensagem |
 | GET | `/api/mensagens/:userId` | Lista conversa com um usuario |

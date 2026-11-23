@@ -367,10 +367,113 @@ function renderAppointments() {
       </div>
       <div class="appointment-actions">
         <span class="status ${item.status}">${item.status}</span>
-        <button class="secondary-button compact-button" type="button" ${item.status === "cancelada" ? "disabled" : ""}>Acessar consulta</button>
+        ${state.user.perfil === "Psicólogo" && item.status === "agendada" && state.token ? `<button class="secondary-button compact-button" type="button" data-confirm-consultation="${item.id}">Confirmar</button>` : ""}
+        <button class="secondary-button compact-button" type="button" data-join-consultation="${item.id}" ${item.status !== "confirmada" || !state.token ? "disabled" : ""}>Acessar consulta</button>
       </div>
     </article>
   `).join("");
+
+  list.querySelectorAll("[data-join-consultation]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const sala = await apiRequest(`/consultas/${button.dataset.joinConsultation}/sala`);
+        openVideoCallModal(sala.link_sala);
+      } catch (error) {
+        $("#scheduleMessage").textContent = error.message || "Não foi possível abrir a sala.";
+      } finally {
+        button.disabled = false;
+      }
+    });
+  });
+  list.querySelectorAll("[data-confirm-consultation]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await apiRequest(`/consultas/${button.dataset.confirmConsultation}/confirmar`, {
+          method: "PATCH",
+          body: JSON.stringify({})
+        });
+        await loadAppointments();
+      } catch (error) {
+        $("#scheduleMessage").textContent = error.message || "Não foi possível confirmar a consulta.";
+        button.disabled = false;
+      }
+    });
+  });
+}
+
+function openVideoCallModal(roomUrl) {
+  const url = new URL(roomUrl);
+  if (url.protocol !== "https:" || !/^[a-z0-9.-]+$/i.test(url.hostname) || !url.pathname.startsWith("/portal-terapia-")) {
+    throw new Error("Link de videochamada inválido.");
+  }
+  const frame = document.createElement("iframe");
+  frame.src = url.toString();
+  frame.allow = "camera; microphone; fullscreen; display-capture";
+  frame.referrerPolicy = "no-referrer";
+  frame.title = "Videochamada da consulta";
+  $("#jitsiContainer").replaceChildren(frame);
+  $("#videoCallModal").hidden = false;
+}
+
+function closeVideoCallModal() {
+  $("#jitsiContainer").replaceChildren();
+  $("#videoCallModal").hidden = true;
+}
+
+function initRecoveryAndVideo() {
+  const resetModal = $("#resetPasswordModal");
+  $("#forgotPasswordButton")?.addEventListener("click", () => {
+    $("#resetModalMessage").textContent = "";
+    $("#forgotPasswordForm").hidden = false;
+    $("#newPasswordForm").hidden = true;
+    resetModal.hidden = false;
+  });
+  $("#closeResetModal")?.addEventListener("click", () => { resetModal.hidden = true; });
+  $("#closeVideoModal")?.addEventListener("click", closeVideoCallModal);
+
+  $("#forgotPasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = $("#forgotEmailInput").value.trim();
+    const message = $("#resetModalMessage");
+    try {
+      const result = await apiRequest("/auth/esqueci-senha", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+      $("#forgotPasswordForm").hidden = true;
+      $("#newPasswordForm").hidden = true;
+      message.textContent = result.mensagem;
+    } catch (error) {
+      message.textContent = error.message || "Não foi possível solicitar a recuperação.";
+    }
+  });
+
+  $("#newPasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const token = $("#resetTokenInput").value.trim();
+    const novaSenha = $("#resetNewPasswordInput").value;
+    try {
+      const result = await apiRequest("/auth/redefinir-senha", {
+        method: "POST",
+        body: JSON.stringify({ token, novaSenha })
+      });
+      $("#resetModalMessage").textContent = result.mensagem;
+      setTimeout(() => { resetModal.hidden = true; }, 1600);
+    } catch (error) {
+      $("#resetModalMessage").textContent = error.message || "Não foi possível redefinir a senha.";
+    }
+  });
+
+  const resetToken = new URLSearchParams(location.hash.slice(1)).get("reset_token");
+  if (resetToken) {
+    $("#resetTokenInput").value = resetToken;
+    $("#forgotPasswordForm").hidden = true;
+    $("#newPasswordForm").hidden = false;
+    resetModal.hidden = false;
+    history.replaceState(null, "", location.pathname);
+  }
 }
 
 async function loadAppointments() {
@@ -854,6 +957,7 @@ async function init() {
   renderScheduleAccess();
   loadStats();
   initForms();
+  initRecoveryAndVideo();
   toggleProfessionalFields();
 }
 

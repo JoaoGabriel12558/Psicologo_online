@@ -1,5 +1,7 @@
 const bcrypt = require("bcryptjs");
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
+const nodemailer = require("nodemailer");
 const { query } = require("../config/database");
 
 const PERFIS = {
@@ -94,5 +96,102 @@ async function login(req, res, next) {
   }
 }
 
-module.exports = { registrar, login, PERFIS };
+async function solicitarRecuperacao(req, res, next) {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  if (!email) return res.status(400).json({ erro: "Informe seu e-mail." });
+
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPassword = process.env.SMTP_PASSWORD;
+  const remetente = process.env.SMTP_FROM || smtpUser;
+  if (!smtpHost || !smtpUser || !smtpPassword || !remetente) {
+    return res.status(503).json({ erro: "A recuperação por e-mail ainda não está configurada." });
+  }
+
+  try {
+    const usuarios = await query(
+      "SELECT id_usuario, email FROM usuario WHERE email = :email",
+      { email }
+    );
+
+    // Resposta igual para contas existentes e inexistentes evita enumeração de e-mails.
+    if (usuarios.length) {
+      const usuario = usuarios[0];
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      await query(
+        `UPDATE usuario
+         SET reset_token_hash = :tokenHash,
+             reset_expira = DATE_ADD(NOW(), INTERVAL 1 HOUR)
+         WHERE id_usuario = :id`,
+        { tokenHash, id: usuario.id_usuario }
+      );
+
+      try {
+        const appUrl = new URL(process.env.APP_URL || "http://localhost:5500/web/index.html");
+        if (!["https:", "http:"].includes(appUrl.protocol) ||
+            (process.env.NODE_ENV === "production" && appUrl.protocol !== "https:")) {
+          throw new Error("APP_URL deve usar HTTP local ou HTTPS.");
+        }
+        appUrl.hash = "reset_token=" + encodeURIComponent(token);
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: Number(process.env.SMTP_PORT || 587),
+          secure: process.env.SMTP_SECURE === "true",
+          auth: { user: smtpUser, pass: smtpPassword }
+        });
+        await transporter.sendMail({
+          from: remetente,
+          to: usuario.email,
+          subject: "Redefinição de senha — Portal Terapia",
+          text: `Use este link para redefinir sua senha. Ele expira em uma hora:\n\n${appUrl.toString()}\n\nSe você não solicitou a redefinição, ignore esta mensagem.`,
+          html: `<p>Use o link abaixo para redefinir sua senha. Ele expira em uma hora.</p><p><a href="${appUrl.toString()}">Redefinir minha senha</a></p><p>Se você não solicitou a redefinição, ignore esta mensagem.</p>`
+        });
+      } catch (error) {
+        await query(
+          "UPDATE usuario SET reset_token_hash = NULL, reset_expira = NULL WHERE id_usuario = :id",
+          { id: usuario.id_usuario }
+        );
+        throw error;
+      }
+    }
+
+    return res.status(202).json({ mensagem: "Se o e-mail estiver cadastrado, você receberá um link de redefinição." });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function redefinirSenha(req, res, next) {
+  try {
+    const token = String(req.body.token || "").trim();
+    const novaSenha = String(req.body.novaSenha || "");
+    if (!token || novaSenha.length < 8) {
+      return res.status(400).json({ erro: "Informe o código e uma senha com pelo menos 8 caracteres." });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const usuarios = await query(
+      `SELECT id_usuario FROM usuario
+       WHERE reset_token_hash = :tokenHash AND reset_expira > NOW()`,
+      { tokenHash }
+    );
+    if (!usuarios.length) {
+      return res.status(400).json({ erro: "Link inválido ou expirado. Solicite outro link." });
+    }
+
+    const senhaHash = await bcrypt.hash(novaSenha, 10);
+    await query(
+      `UPDATE usuario
+       SET senha = :senhaHash, reset_token_hash = NULL, reset_expira = NULL
+       WHERE id_usuario = :id AND reset_token_hash = :tokenHash AND reset_expira > NOW()`,
+      { senhaHash, id: usuarios[0].id_usuario, tokenHash }
+    );
+    return res.json({ mensagem: "Senha redefinida. Você já pode entrar." });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+module.exports = { registrar, login, solicitarRecuperacao, redefinirSenha, PERFIS };
 

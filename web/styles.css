@@ -868,6 +868,15 @@ textarea {
 .horizontal-track span { display: block; height: 100%; border-radius: inherit; background: #6da88f; }
 .empty-chart { margin: 8px 0; color: #75877f; font-size: .85rem; }
 .privacy-note { margin: 18px 0 0; color: #718179; font-size: .8rem; }
+.text-button { width: fit-content; border: 0; padding: 0; background: transparent; color: #236b55; text-decoration: underline; cursor: pointer; }
+.pt-modal-overlay { position: fixed; z-index: 1000; inset: 0; display: grid; place-items: center; padding: 20px; background: #10221dcc; }
+.pt-modal-overlay[hidden] { display: none; }
+.pt-modal-card { position: relative; width: min(100%, 520px); max-height: 92vh; overflow: auto; padding: 28px; border-radius: 18px; background: #fff; box-shadow: 0 18px 70px #0004; }
+.pt-modal-card h2 { margin: 0 36px 20px 0; }
+.pt-modal-close { position: absolute; top: 14px; right: 16px; border: 0; background: transparent; font-size: 1.8rem; cursor: pointer; }
+.pt-video-card { width: min(100%, 1000px); }
+.jitsi-container { min-height: 65vh; margin-top: 16px; overflow: hidden; border-radius: 12px; background: #10221d; }
+.jitsi-container iframe { width: 100%; height: 65vh; border: 0; }
 
 @media (max-width: 760px) {
   .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
