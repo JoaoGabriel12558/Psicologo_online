@@ -37,6 +37,9 @@ const psychologists = demoData?.professionals?.length
   }
   ];
 
+const PROFESSIONALS_PER_PAGE = 10;
+let currentProfessionalsPage = 1;
+
 const state = {
   user: JSON.parse(localStorage.getItem("apo:user")) || null,
   token: localStorage.getItem("apo:token") || "",
@@ -269,14 +272,21 @@ function renderPsychologists() {
   });
 
   const count = filtered.length;
+  const pageCount = Math.max(1, Math.ceil(count / PROFESSIONALS_PER_PAGE));
+  currentProfessionalsPage = Math.min(currentProfessionalsPage, pageCount);
+  const firstIndex = count ? (currentProfessionalsPage - 1) * PROFESSIONALS_PER_PAGE : 0;
+  const visibleProfiles = filtered.slice(firstIndex, firstIndex + PROFESSIONALS_PER_PAGE);
   $("#catalogCount").textContent = formatCount(psychologists.length);
-  $("#catalogResultLabel").textContent = `${count} ${count === 1 ? "perfil encontrado" : "perfis encontrados"}`;
+  $("#catalogResultLabel").textContent = count
+    ? `Mostrando ${firstIndex + 1}–${Math.min(firstIndex + PROFESSIONALS_PER_PAGE, count)} de ${count} ${count === 1 ? "perfil" : "perfis"}`
+    : "Nenhum perfil encontrado";
   if (!count) {
     grid.innerHTML = '<div class="catalog-empty"><strong>Nenhum perfil encontrado</strong><span>Tente remover um filtro ou buscar outra especialidade.</span></div>';
+    $("#catalogPagination").innerHTML = "";
     return;
   }
 
-  grid.innerHTML = filtered.map(({ item, insights }) => `
+  grid.innerHTML = visibleProfiles.map(({ item, insights }) => `
     <article class="professional-card">
       <div class="professional-card-banner">
         <div class="professional-avatar" aria-hidden="true">${escapeHtml(initials(item.nome))}</div>
@@ -305,6 +315,34 @@ function renderPsychologists() {
       </div>
     </article>
   `).join("");
+
+  const pagination = $("#catalogPagination");
+  const startPage = Math.max(1, Math.min(currentProfessionalsPage - 2, pageCount - 4));
+  const endPage = Math.min(pageCount, startPage + 4);
+  const pageButtons = [];
+  if (startPage > 1) {
+    pageButtons.push('<button class="pagination-button" type="button" data-catalog-page="1" aria-label="Ir para a página 1">1</button>');
+    if (startPage > 2) pageButtons.push('<span class="pagination-ellipsis" aria-hidden="true">…</span>');
+  }
+  for (let page = startPage; page <= endPage; page += 1) {
+    const active = page === currentProfessionalsPage;
+    pageButtons.push(`<button class="pagination-button${active ? " is-active" : ""}" type="button" data-catalog-page="${page}" aria-label="Ir para a página ${page}"${active ? ' aria-current="page"' : ""}>${page}</button>`);
+  }
+  if (endPage < pageCount) {
+    if (endPage < pageCount - 1) pageButtons.push('<span class="pagination-ellipsis" aria-hidden="true">…</span>');
+    pageButtons.push(`<button class="pagination-button" type="button" data-catalog-page="${pageCount}" aria-label="Ir para a página ${pageCount}">${pageCount}</button>`);
+  }
+  pagination.innerHTML = `<span class="pagination-summary">Página ${currentProfessionalsPage} de ${pageCount}</span>${pageCount > 1 ? `<div class="pagination-controls"><button class="pagination-button pagination-arrow" type="button" data-catalog-page="${currentProfessionalsPage - 1}" aria-label="Página anterior"${currentProfessionalsPage === 1 ? " disabled" : ""}>‹</button>${pageButtons.join("")}<button class="pagination-button pagination-arrow" type="button" data-catalog-page="${currentProfessionalsPage + 1}" aria-label="Próxima página"${currentProfessionalsPage === pageCount ? " disabled" : ""}>›</button></div>` : ""}`;
+
+  pagination.querySelectorAll("[data-catalog-page]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const requestedPage = Number(button.dataset.catalogPage);
+      if (!Number.isInteger(requestedPage) || requestedPage < 1 || requestedPage > pageCount || requestedPage === currentProfessionalsPage) return;
+      currentProfessionalsPage = requestedPage;
+      renderPsychologists();
+      $("#nosso_time").scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 
   document.querySelectorAll("[data-book]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -917,10 +955,14 @@ function initForms() {
     event.currentTarget.reset();
   });
 
-  $("#searchInput").addEventListener("input", renderPsychologists);
-  $("#specialtyFilter").addEventListener("change", renderPsychologists);
-  $("#experienceFilter").addEventListener("change", renderPsychologists);
-  $("#sortProfessionals").addEventListener("change", renderPsychologists);
+  const resetCatalogPage = () => {
+    currentProfessionalsPage = 1;
+    renderPsychologists();
+  };
+  $("#searchInput").addEventListener("input", resetCatalogPage);
+  $("#specialtyFilter").addEventListener("change", resetCatalogPage);
+  $("#experienceFilter").addEventListener("change", resetCatalogPage);
+  $("#sortProfessionals").addEventListener("change", resetCatalogPage);
   $("#profileSelect").addEventListener("change", toggleProfessionalFields);
 
   document.querySelectorAll("[data-requires-auth='true']").forEach((link) => {
